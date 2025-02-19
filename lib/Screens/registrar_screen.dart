@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import '../widgets/custom_text_field.dart';
+import 'package:image_picker/image_picker.dart';
+
+
 
 class RegistrarScreen extends StatefulWidget {
   const RegistrarScreen({super.key});
@@ -31,10 +34,11 @@ class _RegistrarScreenState extends State<RegistrarScreen> {
         resultData = "falla p causa";
       }
     }
-  
 
-  void _captureImage() {
-    print("Abrir cámara para Bodycam");
+
+  void _captureImage() async {
+    final ImagePicker _picker = ImagePicker();
+    await _picker.pickImage(source: ImageSource.camera);
   }
 
   @override
