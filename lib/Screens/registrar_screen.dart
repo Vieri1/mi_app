@@ -1,9 +1,12 @@
+import 'dart:io';
+import 'dart:convert';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import '../widgets/custom_text_field.dart';
 import 'package:image_picker/image_picker.dart';
-
+import '../utils/image_utils.dart';
 
 
 class RegistrarScreen extends StatefulWidget {
@@ -20,8 +23,27 @@ class _RegistrarScreenState extends State<RegistrarScreen> {
   final TextEditingController _cargoController = TextEditingController();
   final TextEditingController _unidadController = TextEditingController();
 
- 
-    Future<void> QRcan() async {
+  File? _imageFile; // Para almacenar la imagen seleccionada
+  String? _base64Image; // Para almacenar la imagen en Base64
+
+  Future<void> _captureImage() async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.camera);
+
+    if (image != null) {
+      File imageFile = File(image.path);
+      List<int> imageBytes = await imageFile.readAsBytes(); // Leer bytes de la imagen
+      String base64Image = base64Encode(imageBytes); // Convertir a Base64
+      await saveBase64ToFile(base64Image);
+    }
+
+  }
+  Future<void> saveBase64ToFile(String base64Image) async {
+    final file = File('/storage/emulated/0/Download/base64.txt'); // Carpeta de Descargas
+    await file.writeAsString(base64Image);
+    print("✅ Base64 guardado en: ${file.path}");
+  }
+  Future<void> QRcan() async {
       String resultData;
       try {
         resultData = await FlutterBarcodeScanner.scanBarcode(
@@ -35,10 +57,17 @@ class _RegistrarScreenState extends State<RegistrarScreen> {
       }
     }
 
+  void _capturarDatos() {
+    final Map<String, String> datos = {
+      "bodycam": _bodycamController.text,
+      "responsable": _responsableController.text,
+      "jurisdiccion": _jurisdiccionController.text,
+      "jurisdiccion": _jurisdiccionController.text,
+      "cargo": _cargoController.text,
+      "unidad": _unidadController.text,
+    };
 
-  void _captureImage() async {
-    final ImagePicker _picker = ImagePicker();
-    await _picker.pickImage(source: ImageSource.camera);
+    print("Datos capturados: $datos");
   }
 
   @override
@@ -89,9 +118,8 @@ class _RegistrarScreenState extends State<RegistrarScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.green,
         child: Icon(Icons.add, size: 45, color: Colors.white),
-        onPressed: () {
-          print("Agregar nuevo registro");
-        },
+          onPressed: _capturarDatos,
+
       ),
     );
   }
