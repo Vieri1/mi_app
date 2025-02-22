@@ -1,13 +1,11 @@
 import 'dart:io';
-import 'dart:convert';
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import '../widgets/custom_text_field.dart';
 import 'package:image_picker/image_picker.dart';
 import '../utils/image_utils.dart';
-
+import '../services/sockets_services.dart';
 
 class RegistrarScreen extends StatefulWidget {
   const RegistrarScreen({super.key});
@@ -17,14 +15,12 @@ class RegistrarScreen extends StatefulWidget {
 }
 
 class _RegistrarScreenState extends State<RegistrarScreen> {
+  final SocketService socketService = SocketService();
   final TextEditingController _bodycamController = TextEditingController();
   final TextEditingController _responsableController = TextEditingController();
   final TextEditingController _jurisdiccionController = TextEditingController();
   final TextEditingController _cargoController = TextEditingController();
   final TextEditingController _unidadController = TextEditingController();
-
-  File? _imageFile; // Para almacenar la imagen seleccionada
-  String? _base64Image; // Para almacenar la imagen en Base64
 
   Future<void> _captureImage() async {
     final picker = ImagePicker();
@@ -32,17 +28,40 @@ class _RegistrarScreenState extends State<RegistrarScreen> {
 
     if (image != null) {
       File imageFile = File(image.path);
-      List<int> imageBytes = await imageFile.readAsBytes(); // Leer bytes de la imagen
-      String base64Image = base64Encode(imageBytes); // Convertir a Base64
-      await saveBase64ToFile(base64Image);
-    }
+      final response = await ImageUtils.processAndUploadImage(imageFile);
 
+      print("📡 Tipo de response: ${response.runtimeType}");
+      print("📡 Respuesta completa: $response");
+
+      // Verificar que response sea un Map antes de acceder a 'data'
+      if (response is Map<String, dynamic> && response.containsKey('data')) {
+        final data = response['data'];
+
+        if (data is Map<String, dynamic>) {
+          print("📦 Data recibida: $data");
+
+          // Obtener los valores de nombres y apellidos si existen
+          String nombre = data['nombres']?.toString() ?? 'Nombre no disponible';
+          String apellido = data['apellidos']?.toString() ?? '';
+
+          print("👤 Nombre: $nombre, Apellido: $apellido");
+
+          if (mounted) {
+            setState(() {
+              _responsableController.text = "$nombre $apellido";
+            });
+          }
+        } else {
+          print("❌ Error: 'data' no es un mapa válido, es: ${data.runtimeType}");
+        }
+      } else {
+        print("❌ Error: La respuesta no contiene datos válidos.");
+      }
+    }
   }
-  Future<void> saveBase64ToFile(String base64Image) async {
-    final file = File('/storage/emulated/0/Download/base64.txt'); // Carpeta de Descargas
-    await file.writeAsString(base64Image);
-    print("✅ Base64 guardado en: ${file.path}");
-  }
+
+
+
   Future<void> QRcan() async {
       String resultData;
       try {
@@ -56,18 +75,22 @@ class _RegistrarScreenState extends State<RegistrarScreen> {
         resultData = "falla p causa";
       }
     }
-
-  void _capturarDatos() {
-    final Map<String, String> datos = {
-      "bodycam": _bodycamController.text,
-      "responsable": _responsableController.text,
-      "jurisdiccion": _jurisdiccionController.text,
-      "jurisdiccion": _jurisdiccionController.text,
-      "cargo": _cargoController.text,
-      "unidad": _unidadController.text,
-    };
-
-    print("Datos capturados: $datos");
+  void _sendMessage() {
+    String bodycam = _bodycamController.text;
+    String responsable=_responsableController.text;
+    String jurisdiccion = _jurisdiccionController.text;
+    String cargo=_cargoController.text;
+    int? unidad = int.tryParse(_unidadController.text);
+    if (bodycam.isNotEmpty && responsable.isNotEmpty && jurisdiccion.isNotEmpty && cargo.isNotEmpty && unidad!=null) {
+      socketService.sendBodyCam(bodycam,responsable,jurisdiccion,cargo,unidad);
+      _cargoController.clear();
+      _bodycamController.clear();
+      _responsableController.clear();
+      _unidadController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("📩 Datos enviados correctamente")),
+      );
+    }
   }
 
   @override
@@ -117,8 +140,8 @@ class _RegistrarScreenState extends State<RegistrarScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.green,
-        child: Icon(Icons.add, size: 45, color: Colors.white),
-          onPressed: _capturarDatos,
+          child: Icon(Icons.add, size: 45, color: Colors.white),
+          onPressed: _sendMessage,
 
       ),
     );
