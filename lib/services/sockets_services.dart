@@ -1,38 +1,84 @@
+import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
-class SocketService {
-  late IO.Socket socket;
+class SocketService with ChangeNotifier {
+  late IO.Socket _socket;
+  bool _isConnected = false;
 
-  void connect() {
-    socket = IO.io('http://192.168.30.56:3006', <String, dynamic>{
+  bool get isConnected => _isConnected;
+
+  SocketService() {
+    _connect();
+  }
+
+  void _connect() {
+    _socket = IO.io('http://192.168.30.56:3006', <String, dynamic>{
       'transports': ['websocket'],
-      'autoConnect': false,
+      'autoConnect': true,  // Asegurar que se conecte automáticamente
     });
 
-    socket.connect();
-
-    socket.onConnect((_) {
+    _socket.onConnect((_) {
       print("✅ Conectado al servidor Socket.IO");
-      socket.emit("register", "UsuarioFlutter");
+      _isConnected = true;
+      notifyListeners();
     });
 
-    socket.onDisconnect((_) => print("❌ Desconectado del servidor"));
+    _socket.onDisconnect((_) {
+      print("❌ Desconectado del servidor");
+      _isConnected = false;
+      notifyListeners();
+    });
 
-    socket.on("mensaje", (data) {
+    _socket.on("mensaje", (data) {
       print("📩 Mensaje recibido: $data");
     });
   }
 
-  void sendBodyCam(String bodycam, String responsable, String jurisdiccion, String cargo, int unidad) {
-    socket.emit("Regristrobody", {
-      "bodycam": bodycam,
-      "responsable": responsable,
-      "jurisdiccion": jurisdiccion,
-      "cargo": cargo,
-      "unidad": unidad
-    });
+  void sendBodyCam(
+      String Bodycam,
+      String nombre,
+      String apellido,
+      String jurisdiccion,
+      String turno,
+      String funcio_cargo,
+      int unidad,
+      String dni,
+      fecha,
+      hora,
+      BuildContext context,
+      ) {
+    if (_isConnected) {
+      _socket.emitWithAck("createControlBody", {
+        "numero": Bodycam,
+        "nombres": nombre,
+        "apellidos": apellido,
+        "jurisdiccion": jurisdiccion,
+        "turno":turno,
+        "funcion": funcio_cargo,
+        "unidad": unidad,
+        "dni": dni,
+        "fecha_entrega":fecha,
+        "hora_entrega":hora
+      }, ack: (response) {
+        if (response != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("📡 Respuesta del servidor: ${response['message']}")),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("⚠️ No hubo respuesta del servidor")),
+          );
+        }
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ No conectado al servidor, mensaje no enviado.")),
+      );
+    }
   }
+
   void disconnect() {
-    socket.disconnect();
+    _socket.disconnect();
   }
 }
+

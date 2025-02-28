@@ -47,18 +47,7 @@ class CustomTextField extends StatelessWidget {
           IconButton(
             icon: Icon(icon, size: 30),
               onPressed:  onPressed
-              //() {
-              // final scannedCode = await Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => QRScannerScreen(),
-              //   ),
-              //);
 
-              // if (scannedCode != null) {
-              //   controller.text = scannedCode; // Poner el código en el campo de texto
-              // }
-           // },
           ),
       ],
     );
