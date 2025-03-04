@@ -18,7 +18,7 @@ class RegistrarScreen extends StatefulWidget {
 
 class _RegistrarScreenState extends State<RegistrarScreen> {
   String selectedValue = "";
-  String selectedTurno="Mañana";
+  String selectedTurno="MAÑANA";
   final TextEditingController _bodycamController = TextEditingController();
   final TextEditingController _responsableController = TextEditingController();
   final TextEditingController _cargoController = TextEditingController();
@@ -33,6 +33,7 @@ class _RegistrarScreenState extends State<RegistrarScreen> {
     super.initState();
     _loadJurisdicciones(); // Cargar las jurisdicciones al iniciar
   }
+  //capta una imagen y la pone en base 64
   Future<void> _captureImage() async {
     final picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.camera);
@@ -75,7 +76,7 @@ class _RegistrarScreenState extends State<RegistrarScreen> {
       }
     }
   }
-  List<String> turnos = ["Mañana", "Tarde", "Noche"];
+  List<String> turnos = ["MAÑANA", "TARDE", "NOCHE"];
   List<String> jurisdicciones = [];
   Future<void> _loadJurisdicciones() async {
     final apiService = ApiService2();

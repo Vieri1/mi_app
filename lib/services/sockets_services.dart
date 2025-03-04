@@ -12,7 +12,7 @@ class SocketService with ChangeNotifier {
   }
 
   void _connect() {
-    _socket = IO.io('http://192.168.30.56:3006', <String, dynamic>{
+    _socket = IO.io('http://192.168.30.58:3006', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': true,  // Asegurar que se conecte automáticamente
     });
