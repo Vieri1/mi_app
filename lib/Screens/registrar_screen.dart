@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:mi_app/widgets/custom_Dropdown_Field.dart';
 import '../widgets/custom_text_field.dart';
@@ -9,6 +8,8 @@ import '../utils/image_utils.dart';
 import '../services/sockets_services.dart';
 import 'package:provider/provider.dart';
 import '../services/api_incidencias.dart';
+import 'package:intl/intl.dart';
+import '../widgets/scanned_codes_grid.dart';
 class RegistrarScreen extends StatefulWidget {
   const RegistrarScreen({super.key});
 
@@ -17,6 +18,7 @@ class RegistrarScreen extends StatefulWidget {
 }
 
 class _RegistrarScreenState extends State<RegistrarScreen> {
+  List<String> scannedCodes = [];
   String selectedValue = "";
   String selectedTurno="MAÑANA";
   final TextEditingController _bodycamController = TextEditingController();
@@ -27,6 +29,10 @@ class _RegistrarScreenState extends State<RegistrarScreen> {
   String? nombre;
   String? apellido;
   String? funcio_cargo;
+  String? fecha_entrega;
+  String? hora_entrega;
+  final ScrollController _scrollController = ScrollController(); // 🔹 Controlador para hacer scroll
+
   // Variable para almacenar el DNI
   @override
   void initState() {
@@ -91,31 +97,17 @@ class _RegistrarScreenState extends State<RegistrarScreen> {
   }
 
 
-  Future<void> QRcan() async {
-      String resultData;
-      try {
-        resultData = await FlutterBarcodeScanner.scanBarcode(
-            "#ff6666", "cancel", true, ScanMode.QR);
-        print(resultData);
-        setState(() {
-          _bodycamController.text = resultData;
-        });
-      } on PlatformException {
-        resultData = "falla p causa";
-      }
-    }
 
   void _sendMessage(BuildContext context) {
     final socketService = Provider.of<SocketService>(context, listen: false);
-    String Bodycam = _bodycamController.text;
+
     String jurisdiccion = selectedValue;
     String turno=selectedTurno;
     int? unidad = int.tryParse(_unidadController.text);
-    String fecha="2024-02-28";
-    String hora="08:32";
-    if (Bodycam.isNotEmpty && jurisdiccion.isNotEmpty && unidad != null && turno.isNotEmpty) {
+
+    if (scannedCodes.isNotEmpty && jurisdiccion.isNotEmpty && unidad != null && turno.isNotEmpty) {
       socketService.sendBodyCam(
-        Bodycam,
+        scannedCodes,
         nombre ?? "Nombre no disponible",
         apellido ?? "Apellido no disponible",
         jurisdiccion,
@@ -123,23 +115,65 @@ class _RegistrarScreenState extends State<RegistrarScreen> {
         funcio_cargo ?? "No se halló su función",
         unidad,
         dni ?? "DNI no disponible",
-        fecha,
-        hora,
+        fecha_entrega ?? "Fecha no disponible",
+        hora_entrega ?? "Hora no disponible",
         context, // Pasamos el contexto para mostrar el SnackBar
       );
 
       // Limpiar los campos después de enviar
-      _cargoController.clear();
-      _bodycamController.clear();
-      _responsableController.clear();
-      _unidadController.clear();
-      dni = null;
-      apellido = null;
-      nombre = null;
-      funcio_cargo = null;
+      setState(() {
+        scannedCodes.clear();
+        _cargoController.clear();
+        _bodycamController.clear();
+        _responsableController.clear();
+        _unidadController.clear();
+        dni = null;
+        apellido = null;
+        nombre = null;
+        funcio_cargo = null;
+      });
     }
   }
 
+  Future<void> scanBarcode() async {
+    String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
+      "#ff6666",
+      "Cancelar",
+      true,
+      ScanMode.QR,
+    );
+    DateTime now = DateTime.now();
+    fecha_entrega = DateFormat('yyyy-MM-dd').format(now);
+    hora_entrega = DateFormat('HH:mm:ss').format(now);
+
+    print("Escaneados: $scannedCodes");
+    print("Fecha: $fecha_entrega, Hora: $hora_entrega");
+    if (barcodeScanRes != "-1") {
+      setState(() {
+        if (!scannedCodes.contains(barcodeScanRes)) {
+          scannedCodes.add(barcodeScanRes);
+        }
+      });
+
+      // 🔹 Desplazar hacia abajo después de agregar un nuevo código
+      Future.delayed(Duration(milliseconds: 300), () {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+
+    }
+  }
+  void removeCode(int index) {
+    setState(() {
+      scannedCodes.removeAt(index);
+      print('SE ELIMINIMO ESTE ES EL NUMERO ARRAY$scannedCodes');
+    });
+  }
   @override
   Widget build(BuildContext context) {
 
@@ -153,13 +187,12 @@ class _RegistrarScreenState extends State<RegistrarScreen> {
             Expanded(
               child: ListView(
                 children: [
-                  CustomTextField(
-                    controller: _bodycamController,
-                    labelText: "Bodycam",
-                    icon: Icons.qr_code,
-                    onPressed: QRcan,
+                  IconButton(
+                    icon: Icon(Icons.qr_code, color: Colors.green, size: 30), // 🔹 Ícono de información
+                    onPressed:scanBarcode, // 🔹 Función que se ejecutará al presionar el ícono
                   ),
-                  SizedBox(height: 20),
+                  ScannedCodesGrid(scannedCodes: scannedCodes, onRemove: removeCode),
+
                   CustomTextField(
                     controller: _responsableController,
                     labelText: "Responsable",

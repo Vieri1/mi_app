@@ -1,10 +1,22 @@
+
+
+
 import 'package:flutter/material.dart';
-import '../Screens/detalles_screen.dart';
+import '../widgets/pop_up.dart';
 
 class BodycamCard extends StatelessWidget {
-  final Map<String, String> bodycam;
+  final Map<String, dynamic> bodycam; // Cambio de tipo a dynamic
 
   const BodycamCard({super.key, required this.bodycam});
+
+  void _showPopupDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return PopupDetailsDialog(bodycamData: bodycam);
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,16 +28,11 @@ class BodycamCard extends StatelessWidget {
       ),
       child: ListTile(
         leading: Icon(Icons.phone_iphone, size: 40, color: Colors.grey),
-        title: Text("ID: ${bodycam["id"]}",
+          title: Text("Body: ${bodycam["bodyCams"]["numero"]}",
             style: TextStyle(fontWeight: FontWeight.bold)),
         trailing: Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => DetallesScreen(bodycam: bodycam),
-            ),
-          );
+          _showPopupDialog(context);
         },
       ),
     );
